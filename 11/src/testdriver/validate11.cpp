@@ -12,9 +12,11 @@
 #include <iostream>
 #include <cstring>
 #include <iterator>
+#ifdef __unix__
 #include <sys/wait.h>
 #include <unistd.h>
 #include <csignal>
+#endif
 
 
 #include "frvt11.h"
@@ -57,14 +59,18 @@ createTemplate(
     ifstream inputStream(inputFile);
     if (!inputStream.is_open()) {
         cerr << "[ERROR] Failed to open stream for " << inputFile << "." << endl;
+#ifdef __unix__
         raise(SIGTERM);
+#endif
     }
 
     /* Open output log for writing */
     ofstream logStream(outputLog);
     if (!logStream.is_open()) {
         cerr << "[ERROR] Failed to open stream for " << outputLog << "." << endl;
+#ifdef __unix__
         raise(SIGTERM);
+#endif
     }
 
     /* header */
@@ -76,7 +82,9 @@ createTemplate(
         Image image;
         if (!readImage(imagePath, image)) {
             cerr << "[ERROR] Failed to load image file: " << imagePath << "." << endl;
+#ifdef __unix__
             raise(SIGTERM);
+#endif
         }
         image.description = mapStringToImgLabel[desc];
 
@@ -90,7 +98,9 @@ createTemplate(
         ofstream templStream(templatesDir + "/" + templFile);
         if (!templStream.is_open()) {
             cerr << "[ERROR] Failed to open stream for " << templatesDir + "/" + templFile << "." << endl;
+#ifdef __unix__
             raise(SIGTERM);
+#endif
         }
 
         /* Write template file */
@@ -129,14 +139,18 @@ match(
     ifstream inputStream(inputFile);
     if (!inputStream.is_open()) {
         cerr << "[ERROR] Failed to open stream for " << inputFile << "." << endl;
+#ifdef __unix__
         raise(SIGTERM);
+#endif
     }
 
     /* Open scores log for writing */
     ofstream scoresStream(scoresLog);
     if (!scoresStream.is_open()) {
         cerr << "[ERROR] Failed to open stream for " << scoresLog << "." << endl;
+#ifdef __unix__
         raise(SIGTERM);
+#endif
     }
     /* header */
     scoresStream << "enrollTempl verifTempl simScore returnCode" << endl;
@@ -150,12 +164,16 @@ match(
         if (readTemplateFromFile(templatesDir + "/" + enrollID, enrollTempl) != SUCCESS) {
             cerr << "[ERROR] Unable to retrieve template from file : "
                     << templatesDir + "/" + enrollID << endl;
+#ifdef __unix__
             raise(SIGTERM);
+#endif
         }
         if (readTemplateFromFile(templatesDir + "/" + verifID, verifTempl) != SUCCESS) {
             cerr << "[ERROR] Unable to retrieve template from file : "
                     << templatesDir + "/" + verifID << endl;
+#ifdef __unix__
             raise(SIGTERM);
+#endif
         }
 
         /* Call match */
@@ -298,8 +316,10 @@ main(
 	int i = 0;
     for (auto &inputFile : inputFileVector) {
 		/* Fork */
+#ifdef __unix__
 		switch(fork()) {
 		case 0: /* Child */
+#endif
 			if (action == Action::CreateTemplate)
 				return createTemplate(
 						implPtr,
@@ -313,6 +333,7 @@ main(
 						inputFile,
 						templatesDir,
 						outputDir + "/" + outputFileStem + ".log." + to_string(i));
+#ifdef __unix__
 		case -1: /* Error */
 			cerr << "Problem forking" << endl;
 			break;
@@ -320,10 +341,11 @@ main(
 			parent = true;
 			break;
 		}
+#endif
 		i++;
 	}
 
-
+#ifdef __unix__
     /* Parent -- wait for children */
     if (parent) {
         while (numForks > 0) {
@@ -343,6 +365,7 @@ main(
             numForks--;
         }
     }
+#endif
 
     return exitStatus;
 }
