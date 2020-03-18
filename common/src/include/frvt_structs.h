@@ -11,6 +11,17 @@
 #ifndef FRVT_STRUCTS_H_
 #define FRVT_STRUCTS_H_
 
+// Exports
+#if defined (_WIN32)
+#if defined(frvt_11_imagus_001_EXPORTS)
+#define  NISTAPI  __declspec(dllexport)
+#else
+#define  NISTAPI  __declspec(dllimport)
+#endif // dnnbits_EXPORTS
+#else // defined (_WIN32)
+#define DNNBITSAPI
+#endif
+
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -358,14 +369,14 @@ enum class ImageLabel {
  */
 #ifdef NIST_EXTERN_FRVT_STRUCTS_VERSION
 /** major version number. */
-extern uint16_t FRVT_STRUCTS_MAJOR_VERSION;
+NISTAPI extern uint16_t FRVT_STRUCTS_MAJOR_VERSION;
 /** minor version number. */
-extern uint16_t FRVT_STRUCTS_MINOR_VERSION;
+NISTAPI extern uint16_t FRVT_STRUCTS_MINOR_VERSION;
 #else /* NIST_EXTERN_FRVT_STRUCTS_VERSION */
 /** major version number. */
-uint16_t FRVT_STRUCTS_MAJOR_VERSION{1};
+NISTAPI uint16_t FRVT_STRUCTS_MAJOR_VERSION{1};
 /** minor version number. */
-uint16_t FRVT_STRUCTS_MINOR_VERSION{1};
+NISTAPI uint16_t FRVT_STRUCTS_MINOR_VERSION{1};
 #endif /* NIST_EXTERN_FRVT_STRUCTS_VERSION */
 }
 
