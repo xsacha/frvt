@@ -239,7 +239,7 @@ public:
      * A possible implementation might be:
      * return (std::make_shared<Implementation>());
      */
-    static std::shared_ptr<Interface>
+    static NISTAPI std::shared_ptr<Interface>
     getImplementation();
 };
 

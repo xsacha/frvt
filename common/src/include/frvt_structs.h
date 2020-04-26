@@ -13,7 +13,7 @@
 
 // Exports
 #if defined (_WIN32)
-#if defined(frvt_11_imagus_001_EXPORTS)
+#if defined(frvt_11_imagus_001_EXPORTS) | defined(frvt_1N_imagus_5_EXPORTS)
 #define  NISTAPI  __declspec(dllexport)
 #else
 #define  NISTAPI  __declspec(dllimport)
