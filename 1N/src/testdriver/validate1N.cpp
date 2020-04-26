@@ -11,9 +11,11 @@
 #include <fstream>
 #include <iostream>
 #include <cstring>
+#ifndef _WIN32
 #include <sys/wait.h>
 #include <unistd.h>
 #include <csignal>
+#endif
 
 #include "frvt1N.h"
 #include "util.h"
@@ -37,14 +39,18 @@ enroll(shared_ptr<Interface> &implPtr,
     ifstream inputStream(inputFile);
     if (!inputStream.is_open()) {
         cerr << "Failed to open stream for " << inputFile << "." << endl;
+#ifndef _WIN32
 	raise(SIGTERM);
+#endif
     }
 
     /* Open output log for writing */
     ofstream logStream(outputLog);
     if (!logStream.is_open()) {
         cerr << "Failed to open stream for " << outputLog << "." << endl;
+#ifndef _WIN32
         raise(SIGTERM);
+#endif
     }
 
     /* header */
@@ -55,14 +61,18 @@ enroll(shared_ptr<Interface> &implPtr,
     ofstream edbStream(edb);
     if (!edbStream.is_open()) {
         cerr << "Failed to open stream for " << edb << "." << endl;
+#ifndef _WIN32
         raise(SIGTERM);
+#endif
     }
 
     /* Open manifest for writing */
     ofstream manifestStream(manifest);
     if (!manifestStream.is_open()) {
         cerr << "Failed to open stream for " << manifest << "." << endl;
+#ifndef _WIN32
         raise(SIGTERM);
+#endif
     }
 
     string id, line;
@@ -81,7 +91,9 @@ enroll(shared_ptr<Interface> &implPtr,
             string desc = tokens[(i*2)+2];
             if (!readImage(imagePath, image)) {
                 cerr << "Failed to load image file: " << imagePath << "." << endl;
+#ifndef _WIN32
                 raise(SIGTERM);
+#endif
             }
             image.description = mapStringToImgLabel[desc];
             faces.push_back(image);
@@ -104,7 +116,9 @@ enroll(shared_ptr<Interface> &implPtr,
                     "ID " << id <<
                     ", the number of eye coordinates returned (" << eyes.size() <<
                     ") does not match the number of input images (" << faces.size() << ") !" << endl;
+#ifndef _WIN32
             raise(SIGTERM);
+#endif
         }
 
         for (unsigned int i=0; i<faces.size(); i++) {
@@ -143,14 +157,18 @@ finalize(shared_ptr<Interface> &implPtr,
     if (!(ifstream(edb) && ifstream(manifest))) {
         cerr << "EDB file: " << edb << " and/or manifest file: "
                 << manifest << " is missing." << endl;
+#ifndef _WIN32
         raise(SIGTERM);
+#endif
     }
 
     auto ret = implPtr->finalizeEnrollment(configDir, enrollDir, edb, manifest, GalleryType::Unconsolidated);
     if (ret.code != ReturnCode::Success) {
         cerr << "finalizeEnrollment() returned error code: "
                 << ret.code << "." << endl;
+#ifndef _WIN32
         raise(SIGTERM);
+#endif
     }
     return SUCCESS;
 }
@@ -206,14 +224,18 @@ search(shared_ptr<Interface> &implPtr,
     ifstream inputStream(inputFile);
     if (!inputStream.is_open()) {
         cerr << "Failed to open stream for " << inputFile << "." << endl;
-       	raise(SIGTERM); 
+#ifndef _WIN32
+       	raise(SIGTERM);
+#endif
     }
 
     /* Open candidate list log for writing */
     ofstream candListStream(candList);
     if (!candListStream.is_open()) {
         cerr << "Failed to open stream for " << candList << "." << endl;
+#ifndef _WIN32
         raise(SIGTERM);
+#endif
     }
     /* header */
     candListStream << candListHeader << endl;
@@ -224,7 +246,9 @@ search(shared_ptr<Interface> &implPtr,
         Image image;
         if (!readImage(imagePath, image)) {
             cerr << "Failed to load image file: " << imagePath << "." << endl;
+#ifndef _WIN32
             raise(SIGTERM);
+#endif
         }
         image.description = mapStringToImgLabel[desc];
 
@@ -253,7 +277,9 @@ insert(shared_ptr<Interface> &implPtr,
     ifstream inputStream(inputFile);
     if (!inputStream.is_open()) {
         cerr << "Failed to open stream for " << inputFile << "." << endl;
+#ifndef _WIN32
         raise(SIGTERM);
+#endif
     }
 
     vector<string> ids;
@@ -267,7 +293,9 @@ insert(shared_ptr<Interface> &implPtr,
         Image image;
         if (!readImage(imagePath, image)) {
             cerr << "Failed to load image file: " << imagePath << "." << endl;
+#ifndef _WIN32
             raise(SIGTERM);
+#endif
         }
         image.description = mapStringToImgLabel[desc];
 
@@ -292,7 +320,9 @@ insert(shared_ptr<Interface> &implPtr,
     ofstream candListStream(candList);
     if (!candListStream.is_open()) {
         cerr << "Failed to open stream for " << candList << "." << endl;
+#ifndef _WIN32
         raise(SIGTERM);
+#endif
     }
     /* header */
     candListStream << candListHeader << endl;
@@ -330,7 +360,9 @@ initialize(
         if (ret.code != ReturnCode::Success) {
             cerr << "initializeTemplateCreation(TemplateRole::Enrollment_1N) returned error code: "
                     << ret.code << "." << endl;
+#ifndef _WIN32
             raise(SIGTERM);
+#endif
         }
     } else if (action == Action::Search_1N || action == Action::Insert) {
         /* Initialize probe feature extraction */
@@ -338,7 +370,9 @@ initialize(
         if (ret.code != ReturnCode::Success) {
             cerr << "initializeTemplateCreation(TemplateRole::Search_1N) returned error code: "
                     << ret.code << "." << endl;
+#ifndef _WIN32
             raise(SIGTERM);
+#endif
         }
 
         /* Initialize search */
@@ -346,7 +380,9 @@ initialize(
         if (ret.code != ReturnCode::Success) {
             cerr << "initializeIdentification() returned error code: "
                     << ret.code << "." << endl;
+#ifndef _WIN32
             raise(SIGTERM);
+#endif
         }
     }
     return SUCCESS;
@@ -446,8 +482,10 @@ main(int argc, char* argv[])
         ReturnStatus ret;
         for (auto &inputFile : inputFileVector) {
             /* Fork */
+#ifndef _WIN32
             switch(fork()) {
             case 0: /* Child */
+#endif
                 if (action == Action::Enroll_1N)
                     return enroll(
                             implPtr,
@@ -463,6 +501,7 @@ main(int argc, char* argv[])
                             enrollDir,
                             inputFile,
                             outputDir + "/" + outputFileStem + "." + mapActionToString[action] + "." + to_string(i));
+#ifndef _WIN32
             case -1: /* Error */
                 cerr << "Problem forking" << endl;
                 break;
@@ -470,11 +509,13 @@ main(int argc, char* argv[])
                 parent = true;
                 break;
             }
+#endif
             i++;
         }
 
         /* Parent -- wait for children */
         if (parent) {
+#ifndef _WIN32
             while (numForks > 0) {
                 int stat_val;
                 pid_t cpid;
@@ -492,6 +533,7 @@ main(int argc, char* argv[])
 
                 numForks--;
             }
+#endif
         }
     } else if (action == Action::Finalize_1N) {
         return finalize(implPtr, outputDir, enrollDir, configDir);
