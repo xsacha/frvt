@@ -41,6 +41,8 @@ readImage(
         memcpy(data, mat.isContinuous() ? mat.data : mat.clone().data, len);
         image.data.reset(data, std::default_delete<uint8_t[]>());
         image.depth = 8 * mat.channels();
+        image.width = mat.cols;
+        image.height = mat.rows;
     }
     catch (std::exception)
     {
