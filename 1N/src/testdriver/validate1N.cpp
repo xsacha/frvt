@@ -312,7 +312,7 @@ search(shared_ptr<Interface> &implPtr,
             vector<EyePair> eyes;
             auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
             /* Do search and log results to candidatelist file */
-            searchAndLog(implPtr, id++, templ, candListStream, ret);
+            searchAndLog(implPtr, std::to_string(id++), templ, candListStream, ret);
         }
         return SUCCESS;
     }
