@@ -592,12 +592,15 @@ main(int argc, char* argv[])
                             implPtr,
                             configDir,
                             inputFile,
-                            outputDir + "/" + outputFileStem + "." + mapActionToString[action] + "." + to_string(i),
-                            outputDir + "/edb"
+                            outputDir + "/" + outputFileStem + "." + mapActionToString[action]
 #ifndef _WIN32
                             + "." + to_string(i)
 #endif
-                            ,outputDir + "/manifest"
+                            , outputDir + "/edb"
+#ifndef _WIN32
+                            + "." + to_string(i)
+#endif
+                            , outputDir + "/manifest"
 #ifndef _WIN32
                             + "." + to_string(i)
 #endif
@@ -608,7 +611,11 @@ main(int argc, char* argv[])
                             configDir,
                             enrollDir,
                             inputFile,
-                            outputDir + "/" + outputFileStem + "." + mapActionToString[action] + "." + to_string(i));
+                            outputDir + "/" + outputFileStem + "." + mapActionToString[action]
+#ifndef _WIN32
+                        + "." + to_string(i)
+#endif
+                    );
 #ifndef _WIN32
             case -1: /* Error */
                 cerr << "Problem forking" << endl;
