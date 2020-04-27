@@ -592,8 +592,15 @@ main(int argc, char* argv[])
                             configDir,
                             inputFile,
                             outputDir + "/" + outputFileStem + "." + mapActionToString[action] + "." + to_string(i),
-                            outputDir + "/edb." + to_string(i),
-                            outputDir + "/manifest." + to_string(i));
+                            outputDir + "/edb"
+#ifndef _WIN32
+                            + "." + to_string(i)
+#endif
+                            ,outputDir + "/manifest"
+#ifndef _WIN32
+                            + "." + to_string(i)
+#endif
+                        );
                 else if (action == Action::Search_1N)
                     return search(
                             implPtr,
