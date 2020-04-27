@@ -33,9 +33,16 @@ readImage(
     Image &image)
 {
 #ifdef _WIN32
-    auto mat = cv::imread(file);
-    image.data.reset(mat.isContinuous() ? mat.data : mat.clone().data, std::default_delete<uint8_t[]>());
-    image.depth = 8 * mat.channels();
+    try
+    {
+        auto mat = cv::imread(file);
+        image.data.reset(mat.isContinuous() ? mat.data : mat.clone().data, std::default_delete<uint8_t[]>());
+        image.depth = 8 * mat.channels();
+    }
+    catch (std::exception)
+    {
+        return false;
+    }
     return true;
 #else
     /* Open PPM file. */

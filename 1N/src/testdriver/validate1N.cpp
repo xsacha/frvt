@@ -85,14 +85,14 @@ enroll(shared_ptr<Interface> &implPtr,
         int id = 0;
         for(auto& p: fs::directory_iterator(inputFile))
         {
-            Multiface faces;
             Image image;
             string imagePath = p.path().string();
             if (!readImage(imagePath, image)) {
                 cerr << "Failed to load image file: " << imagePath << "." << endl;
+                continue;
             }
             image.description = FRVT::Image::Label::Unknown;
-            faces.push_back(image);
+            Multiface faces{image};
 
             vector<uint8_t> templ;
             vector<EyePair> eyes;
@@ -278,18 +278,10 @@ search(shared_ptr<Interface> &implPtr,
     const string &inputFile,
     const string &candList)
 {
-    /* Read probes */
-    ifstream inputStream(inputFile);
-    if (!inputStream.is_open()) {
-        cerr << "Failed to open stream for " << inputFile << "." << endl;
-#ifndef _WIN32
-       	raise(SIGTERM);
-#endif
-    }
-
     /* Open candidate list log for writing */
     ofstream candListStream(candList);
-    if (!candListStream.is_open()) {
+    if (!candListStream.is_open())
+    {
         cerr << "Failed to open stream for " << candList << "." << endl;
 #ifndef _WIN32
         raise(SIGTERM);
@@ -297,6 +289,41 @@ search(shared_ptr<Interface> &implPtr,
     }
     /* header */
     candListStream << candListHeader << endl;
+
+    /* Read probes */
+#ifdef _WIN32
+    // Special Windows only path for taking a directory
+    if (fs::is_directory(inputFile))
+    {
+        int id = 0;
+        for (auto &p : fs::directory_iterator(inputFile))
+        {
+            Image image;
+            string imagePath = p.path().string();
+            if (!readImage(imagePath, image))
+            {
+                cerr << "Failed to load image file: " << imagePath << "." << endl;
+                continue;
+            }
+            image.description = FRVT::Image::Label::Unknown;
+            Multiface faces{image};
+
+            vector<uint8_t> templ;
+            vector<EyePair> eyes;
+            auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
+            /* Do search and log results to candidatelist file */
+            searchAndLog(implPtr, id++, templ, candListStream, ret);
+        }
+        return SUCCESS;
+    }
+#endif
+    ifstream inputStream(inputFile);
+    if (!inputStream.is_open()) {
+        cerr << "Failed to open stream for " << inputFile << "." << endl;
+#ifndef _WIN32
+       	raise(SIGTERM);
+#endif
+    }
 
     /* Process each probe */
     string id, imagePath, desc;
@@ -313,7 +340,7 @@ search(shared_ptr<Interface> &implPtr,
         Multiface faces{image};
         vector<uint8_t> templ;
         vector<EyePair> eyes;
-        auto ret = implPtr->createTemplate(faces, TemplateRole::Search_1N, templ, eyes);
+        auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
 
         /* Do search and log results to candidatelist file */
         searchAndLog(implPtr, id, templ, candListStream, ret);
