@@ -27,7 +27,7 @@ using namespace std;
 using namespace FRVT;
 using namespace FRVT_1N;
 
-const int candListLength{20};
+const int candListLength{10};
 const std::string candListHeader{"searchId candidateRank searchRetCode isAssigned templateId score decision"};
 
 int

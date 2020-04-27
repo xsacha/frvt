@@ -12,7 +12,10 @@
 #include <iostream>
 #include <cstring>
 #include <iterator>
-#ifdef __unix__
+#ifdef _WIN32
+#include <filesystem>
+namespace fs = std::filesystem;
+#elif defined(__unix__)
 #include <sys/wait.h>
 #include <unistd.h>
 #include <csignal>
@@ -55,15 +58,6 @@ createTemplate(
         const string &templatesDir,
         TemplateRole role)
 {
-    /* Read input file */
-    ifstream inputStream(inputFile);
-    if (!inputStream.is_open()) {
-        cerr << "[ERROR] Failed to open stream for " << inputFile << "." << endl;
-#ifdef __unix__
-        raise(SIGTERM);
-#endif
-    }
-
     /* Open output log for writing */
     ofstream logStream(outputLog);
     if (!logStream.is_open()) {
@@ -76,6 +70,71 @@ createTemplate(
     /* header */
     logStream << "id image templateSizeBytes returnCode isLeftEyeAssigned "
             "isRightEyeAssigned xleft yleft xright yright" << endl;
+
+        /* Read input file */
+#ifdef _WIN32
+    if (!fs::exists(inputFile))
+    {
+        return FAILURE;
+    }
+    // Special Windows only path for taking a directory
+    if (fs::is_directory(inputFile))
+    {
+        int id = 0;
+        fs::directory_iterator dir_it(inputFile);
+        for (; dir_it != fs::directory_iterator(); ++dir_it)
+        {
+            if (fs::is_regular_file(dir_it->status()))
+            {
+                Image image;
+                std::string imagePath = dir_it->path().string();
+                if (!readImage(imagePath, image))
+                {
+                    cerr << "[ERROR] Failed to load image file: " << imagePath << "." << endl;
+#ifdef __unix__
+                    raise(SIGTERM);
+#endif
+                }
+                image.description = FRVT::Image::Label::Unknown;
+
+                Multiface faces{image};
+                vector<uint8_t> templ;
+                vector<EyePair> eyes;
+                auto ret = implPtr->createTemplate(faces, role, templ, eyes);
+
+                /* Open template file for writing */
+                string templFile{id + ".template"};
+                ofstream templStream(templatesDir + "/" + templFile);
+                if (!templStream.is_open())
+                {
+                    cerr << "[ERROR] Failed to open stream for " << templatesDir + "/" + templFile << "." << endl;
+#ifdef __unix__
+                    raise(SIGTERM);
+#endif
+                }
+
+                /* Write template file */
+                templStream.write((char *)templ.data(), templ.size());
+
+                /* Write template stats to log */
+                logStream << id << " " << imagePath << " " << templ.size() << " " << static_cast<std::underlying_type<ReturnCode>::type>(ret.code) << " "
+                          << (eyes.size() > 0 ? eyes[0].isLeftAssigned : false) << " " << (eyes.size() > 0 ? eyes[0].isRightAssigned : false) << " "
+                          << (eyes.size() > 0 ? eyes[0].xleft : 0) << " " << (eyes.size() > 0 ? eyes[0].yleft : 0) << " " << (eyes.size() > 0 ? eyes[0].xright : 0) << " "
+                          << (eyes.size() > 0 ? eyes[0].yright : 0) << endl;
+            }
+        }
+        return SUCCESS;
+    }
+#endif
+
+    ifstream inputStream(inputFile);
+    if (!inputStream.is_open())
+    {
+        cerr << "[ERROR] Failed to open stream for " << inputFile << "." << endl;
+#ifdef __unix__
+        raise(SIGTERM);
+#endif
+    }
 
     string id, imagePath, desc;
     while (inputStream >> id >> imagePath >> desc) {
