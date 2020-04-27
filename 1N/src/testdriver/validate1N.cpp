@@ -71,53 +71,51 @@ enroll(shared_ptr<Interface> &implPtr,
     
     /* Read input file */
 #ifdef _WIN32
+    if (!fs::exists(inputFile))
+    {
+        return FAILURE;
+    }
     // Special Windows only path for taking a directory
     if (fs::is_directory(inputFile))
     {
         int id = 0;
-        for(auto& p: fs::directory_iterator(inputFile))
+        fs::directory_iterator dir_it(inputFile);
+        for (; dir_it != fs::directory_iterator(); ++dir_it)
         {
-            Image image;
-            string imagePath = p.path().string();
-            if (!readImage(imagePath, image)) {
-                cerr << "Failed to load image file: " << imagePath << "." << endl;
-                continue;
-            }
-            image.description = FRVT::Image::Label::Unknown;
-            Multiface faces{image};
+            if (fs::is_regular_file(dir_it->status()))
+            {
+                Image image;
+                string imagePath = dir_it->path().string();
+                if (!readImage(imagePath, image))
+                {
+                    cerr << "Failed to load image file: " << imagePath << "." << endl;
+                    continue;
+                }
+                image.description = FRVT::Image::Label::Unknown;
+                Multiface faces{image};
 
-            vector<uint8_t> templ;
-            vector<EyePair> eyes;
-            auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
+                vector<uint8_t> templ;
+                vector<EyePair> eyes;
+                auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
 
-            /* Write to edb and manifest */
-            manifestStream << id++ << " "
-                    << templ.size() << " "
-                    << edbStream.tellp() << endl;
-            edbStream.write(
-                    (char*)templ.data(),
-                    templ.size());
+                /* Write to edb and manifest */
+                manifestStream << id++ << " " << templ.size() << " " << edbStream.tellp() << endl;
+                edbStream.write((char *)templ.data(), templ.size());
 
-            if (faces.size() != eyes.size()) {
-                cerr << "Error processing input "
-                        "ID " << id <<
-                        ", the number of eye coordinates returned (" << eyes.size() <<
-                        ") does not match the number of input images (" << faces.size() << ") !" << endl;
-            }
+                if (faces.size() != eyes.size())
+                {
+                    cerr << "Error processing input "
+                            "ID "
+                         << id << ", the number of eye coordinates returned (" << eyes.size() << ") does not match the number of input images (" << faces.size() << ") !" << endl;
+                }
 
-            for (unsigned int i=0; i<faces.size(); i++) {
-                /* Write template stats to log */
-                logStream << id << " "
-                        << imagePath << " "
-                        << templ.size() << " "
-                        << static_cast<std::underlying_type<ReturnCode>::type>(ret.code) << " "
-                        << eyes[i].isLeftAssigned << " "
-                        << eyes[i].isRightAssigned << " "
-                        << eyes[i].xleft << " "
-                        << eyes[i].yleft << " "
-                        << eyes[i].xright << " "
-                        << eyes[i].yright << " "
-                        << endl;
+                for (unsigned int i = 0; i < faces.size(); i++)
+                {
+                    /* Write template stats to log */
+                    logStream << id << " " << imagePath << " " << templ.size() << " " << static_cast<std::underlying_type<ReturnCode>::type>(ret.code) << " "
+                              << eyes[i].isLeftAssigned << " " << eyes[i].isRightAssigned << " " << eyes[i].xleft << " " << eyes[i].yleft << " " << eyes[i].xright << " "
+                              << eyes[i].yright << " " << endl;
+                }
             }
         }
 
@@ -297,23 +295,27 @@ search(shared_ptr<Interface> &implPtr,
     if (fs::is_directory(inputFile))
     {
         int id = 0;
-        for (auto &p : fs::directory_iterator(inputFile))
+        fs::directory_iterator dir_it(inputFile);
+        for (; dir_it != fs::directory_iterator(); ++dir_it)
         {
-            Image image;
-            string imagePath = p.path().string();
-            if (!readImage(imagePath, image))
+            if (fs::is_regular_file(dir_it->status()))
             {
-                cerr << "Failed to load image file: " << imagePath << "." << endl;
-                continue;
-            }
-            image.description = FRVT::Image::Label::Unknown;
-            Multiface faces{image};
+                Image image;
+                string imagePath = dir_it->path().string();
+                if (!readImage(imagePath, image))
+                {
+                    cerr << "Failed to load image file: " << imagePath << "." << endl;
+                    continue;
+                }
+                image.description = FRVT::Image::Label::Unknown;
+                Multiface faces{image};
 
-            vector<uint8_t> templ;
-            vector<EyePair> eyes;
-            auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
-            /* Do search and log results to candidatelist file */
-            searchAndLog(implPtr, std::to_string(id++), templ, candListStream, ret);
+                vector<uint8_t> templ;
+                vector<EyePair> eyes;
+                auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
+                /* Do search and log results to candidatelist file */
+                searchAndLog(implPtr, std::to_string(id++), templ, candListStream, ret);
+            }
         }
         return SUCCESS;
     }
@@ -563,18 +565,24 @@ main(int argc, char* argv[])
             return EXIT_FAILURE;
 
         /* Split input file into appropriate number of splits */
+#ifdef _WIN32
+        fs::create_directory(configDir);
+        fs::create_directory(outputDir);
+#else
         vector<string> inputFileVector;
         if (splitInputFile(inputFile, outputDir, numForks, inputFileVector) != EXIT_SUCCESS) {
             cerr << "An error occurred with processing the input file." << endl;
             return EXIT_FAILURE;
         }
+#endif
 
         bool parent = false;
         int i = 0;
         ReturnStatus ret;
+        
+#ifndef _WIN32
         for (auto &inputFile : inputFileVector) {
             /* Fork */
-#ifndef _WIN32
             switch(fork()) {
             case 0: /* Child */
 #endif
@@ -601,9 +609,9 @@ main(int argc, char* argv[])
                 parent = true;
                 break;
             }
-#endif
             i++;
         }
+#endif
 
         /* Parent -- wait for children */
         if (parent) {

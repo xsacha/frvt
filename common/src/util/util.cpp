@@ -36,7 +36,10 @@ readImage(
     try
     {
         auto mat = cv::imread(file);
-        image.data.reset(mat.isContinuous() ? mat.data : mat.clone().data, std::default_delete<uint8_t[]>());
+        size_t len = mat.total() * mat.elemSize();
+        uint8_t *data = new uint8_t[len];
+        memcpy(data, mat.isContinuous() ? mat.data : mat.clone().data, len);
+        image.data.reset(data, std::default_delete<uint8_t[]>());
         image.depth = 8 * mat.channels();
     }
     catch (std::exception)
