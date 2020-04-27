@@ -13,6 +13,9 @@
 #include <fstream>
 
 #include "util.h"
+#ifdef _WIN32
+#include <opencv2/imgcodecs.hpp>
+#endif
 
 using namespace std;
 using namespace FRVT;
@@ -29,6 +32,12 @@ readImage(
     const string &file,
     Image &image)
 {
+#ifdef _WIN32
+    auto mat = cv::imread(file);
+    image.data.reset(mat.isContinuous() ? mat.data : mat.clone().data, std::default_delete<uint8_t[]>());
+    image.depth = 8 * mat.channels();
+    return true;
+#else
     /* Open PPM file. */
     ifstream input(file, ios::binary);
     if (!input.is_open()) {
@@ -69,6 +78,7 @@ readImage(
         cerr << "[ERROR] Error, only read " << input.gcount() << " bytes." << endl;
         return false;
     }
+#endif
     return true;
 }
 
