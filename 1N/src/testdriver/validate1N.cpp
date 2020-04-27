@@ -568,6 +568,7 @@ main(int argc, char* argv[])
 #ifdef _WIN32
         fs::create_directory(configDir);
         fs::create_directory(outputDir);
+        fs::create_directory(enrollDir);
 #else
         vector<string> inputFileVector;
         if (splitInputFile(inputFile, outputDir, numForks, inputFileVector) != EXIT_SUCCESS) {
