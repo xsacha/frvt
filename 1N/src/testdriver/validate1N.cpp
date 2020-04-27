@@ -11,7 +11,10 @@
 #include <fstream>
 #include <iostream>
 #include <cstring>
-#ifndef _WIN32
+#ifdef _WIN32
+#include <filesystem>
+namespace fs = std::filesystem;
+#else
 #include <sys/wait.h>
 #include <unistd.h>
 #include <csignal>
@@ -35,8 +38,7 @@ enroll(shared_ptr<Interface> &implPtr,
     const string &edb,
     const string &manifest)
 {
-    /* Read input file */
-    ifstream inputStream(inputFile);
+        ifstream inputStream(inputFile);
     if (!inputStream.is_open()) {
         cerr << "Failed to open stream for " << inputFile << "." << endl;
 #ifndef _WIN32
@@ -74,6 +76,62 @@ enroll(shared_ptr<Interface> &implPtr,
         raise(SIGTERM);
 #endif
     }
+    
+    /* Read input file */
+#ifdef _WIN32
+    // Special Windows only path for taking a directory
+    if (fs::is_directory(inputFile))
+    {
+        int id = 0;
+        for(auto& p: fs::directory_iterator(inputFile))
+        {
+            Multiface faces;
+            Image image;
+            string imagePath = p.path().string();
+            if (!readImage(imagePath, image)) {
+                cerr << "Failed to load image file: " << imagePath << "." << endl;
+            }
+            image.description = FRVT::Image::Label::Unknown;
+            faces.push_back(image);
+
+            vector<uint8_t> templ;
+            vector<EyePair> eyes;
+            auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
+
+            /* Write to edb and manifest */
+            manifestStream << id++ << " "
+                    << templ.size() << " "
+                    << edbStream.tellp() << endl;
+            edbStream.write(
+                    (char*)templ.data(),
+                    templ.size());
+
+            if (faces.size() != eyes.size()) {
+                cerr << "Error processing input "
+                        "ID " << id <<
+                        ", the number of eye coordinates returned (" << eyes.size() <<
+                        ") does not match the number of input images (" << faces.size() << ") !" << endl;
+            }
+
+            for (unsigned int i=0; i<faces.size(); i++) {
+                /* Write template stats to log */
+                logStream << id << " "
+                        << imagePath << " "
+                        << templ.size() << " "
+                        << static_cast<std::underlying_type<ReturnCode>::type>(ret.code) << " "
+                        << eyes[i].isLeftAssigned << " "
+                        << eyes[i].isRightAssigned << " "
+                        << eyes[i].xleft << " "
+                        << eyes[i].yleft << " "
+                        << eyes[i].xright << " "
+                        << eyes[i].yright << " "
+                        << endl;
+            }
+        }
+
+        return SUCCESS;
+    }
+#endif
 
     string id, line;
 
@@ -343,7 +401,11 @@ insert(shared_ptr<Interface> &implPtr,
 void usage(const string &executable)
 {
     cerr << "Usage: " << executable << " enroll_1N|finalize_1N|search_1N|insert -c configDir -e enrollDir "
-            "-o outputDir -h outputStem -i inputFile -t numForks" << endl;
+            "-o outputDir -h outputStem -i inputFile/Dir"
+#ifndef _WIN32
+         << "-t numForks"
+#endif
+        << endl;
     exit(EXIT_FAILURE);
 }
 
@@ -444,8 +506,10 @@ main(int argc, char* argv[])
             outputFileStem = argv[requiredArgs+(++i)];
         else if (strcmp(argv[requiredArgs+i],"-i") == 0)
             inputFile = argv[requiredArgs+(++i)];
+#ifndef _WIN32
         else if (strcmp(argv[requiredArgs+i],"-t") == 0)
             numForks = atoi(argv[requiredArgs+(++i)]);
+#endif
         else {
             cerr << "Unrecognized flag: " << argv[requiredArgs+i] << endl;;
             usage(argv[0]);
