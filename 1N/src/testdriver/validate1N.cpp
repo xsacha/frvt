@@ -38,14 +38,6 @@ enroll(shared_ptr<Interface> &implPtr,
     const string &edb,
     const string &manifest)
 {
-        ifstream inputStream(inputFile);
-    if (!inputStream.is_open()) {
-        cerr << "Failed to open stream for " << inputFile << "." << endl;
-#ifndef _WIN32
-	raise(SIGTERM);
-#endif
-    }
-
     /* Open output log for writing */
     ofstream logStream(outputLog);
     if (!logStream.is_open()) {
@@ -132,6 +124,15 @@ enroll(shared_ptr<Interface> &implPtr,
         return SUCCESS;
     }
 #endif
+
+    ifstream inputStream(inputFile);
+    if (!inputStream.is_open())
+    {
+        cerr << "Failed to open stream for " << inputFile << "." << endl;
+#ifndef _WIN32
+        raise(SIGTERM);
+#endif
+    }
 
     string id, line;
 
