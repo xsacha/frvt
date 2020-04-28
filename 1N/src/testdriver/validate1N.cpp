@@ -451,8 +451,11 @@ insert(shared_ptr<Interface> &implPtr,
 
 void usage(const string &executable)
 {
-    cerr << "Usage: " << executable << " enroll_1N|finalize_1N|search_1N|insert -c configDir -e enrollDir "
-            "-o outputDir -h outputStem -i inputFile/Dir -n topn"
+    cerr << "Usage: " << executable << " enroll_1N|finalize_1N|search_1N|insert "
+#ifndef _WIN32
+            "-c configDir "
+#endif
+            "-e enrollDir -o outputDir -h outputStem -i inputFile/Dir -n topn"
 #ifndef _WIN32
          << "-t numForks"
 #endif
@@ -547,9 +550,12 @@ main(int argc, char* argv[])
     int numForks = 1;
 
     for (int i = 0; i < argc - requiredArgs; i++) {
+#ifndef _WIN32
         if (strcmp(argv[requiredArgs+i],"-c") == 0)
             configDir = argv[requiredArgs+(++i)];
-        else if (strcmp(argv[requiredArgs+i],"-e") == 0)
+        else
+#endif
+            if (strcmp(argv[requiredArgs+i],"-e") == 0)
             enrollDir = argv[requiredArgs+(++i)];
         else if (strcmp(argv[requiredArgs+i],"-o") == 0)
             outputDir = argv[requiredArgs+(++i)];
@@ -589,7 +595,6 @@ main(int argc, char* argv[])
 
         /* Split input file into appropriate number of splits */
 #ifdef _WIN32
-        fs::create_directory(configDir);
         fs::create_directory(outputDir);
         fs::create_directory(enrollDir);
 #else
