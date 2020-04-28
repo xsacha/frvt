@@ -98,7 +98,7 @@ enroll(shared_ptr<Interface> &implPtr,
                 vector<EyePair> eyes;
                 auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
                 /* Write to edb and manifest */
-                manifestStream << id++ << " " << templ.size() << " " << edbStream.tellp() << endl;
+                manifestStream << id << " " << templ.size() << " " << edbStream.tellp() << endl;
                 edbStream.write((const char*)templ.data(), templ.size());
 
                 if (faces.size() != eyes.size())
@@ -115,6 +115,7 @@ enroll(shared_ptr<Interface> &implPtr,
                               << eyes[i].isLeftAssigned << " " << eyes[i].isRightAssigned << " " << eyes[i].xleft << " " << eyes[i].yleft << " " << eyes[i].xright << " "
                               << eyes[i].yright << " " << endl;
                 }
+                id++;
             }
         }
 
@@ -277,7 +278,18 @@ search(shared_ptr<Interface> &implPtr,
     const string &candList)
 {
     /* Open candidate list log for writing */
+#ifdef _WIN32
+    ofstream logStream(candList);
+    /* header */
+    logStream << "id image templateSizeBytes returnCode isLeftEyeAssigned "
+                 "isRightEyeAssigned xleft yleft xright yright"
+              << endl;
+    fs::path candPath = candList;
+    candPath.replace_extension("result_1N");
+    ofstream candListStream(candPath.string());
+#else
     ofstream candListStream(candList);
+#endif
     if (!candListStream.is_open())
     {
         cerr << "Failed to open stream for " << candList << "." << endl;
@@ -312,6 +324,16 @@ search(shared_ptr<Interface> &implPtr,
                 vector<uint8_t> templ;
                 vector<EyePair> eyes;
                 auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
+
+#ifdef _WIN32
+                for (unsigned int i = 0; i < faces.size(); i++)
+                {
+                    /* Write template stats to log */
+                    logStream << id << " " << imagePath << " " << templ.size() << " " << static_cast<std::underlying_type<ReturnCode>::type>(ret.code) << " "
+                              << eyes[i].isLeftAssigned << " " << eyes[i].isRightAssigned << " " << eyes[i].xleft << " " << eyes[i].yleft << " " << eyes[i].xright << " "
+                              << eyes[i].yright << " " << endl;
+                }
+#endif
                 /* Do search and log results to candidatelist file */
                 searchAndLog(implPtr, std::to_string(id++), templ, candListStream, ret);
             }
