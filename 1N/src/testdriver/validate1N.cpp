@@ -27,7 +27,7 @@ using namespace std;
 using namespace FRVT;
 using namespace FRVT_1N;
 
-const int candListLength{10};
+int candListLength{10};
 const std::string candListHeader{"searchId candidateRank searchRetCode isAssigned templateId score decision"};
 
 int
@@ -52,7 +52,7 @@ enroll(shared_ptr<Interface> &implPtr,
             "isRightEyeAssigned xleft yleft xright yright" << endl;
 
     /* Open EDB file for writing */
-    ofstream edbStream(edb);
+    ofstream edbStream(edb, std::ios::binary);
     if (!edbStream.is_open()) {
         cerr << "Failed to open stream for " << edb << "." << endl;
 #ifndef _WIN32
@@ -97,10 +97,9 @@ enroll(shared_ptr<Interface> &implPtr,
                 vector<uint8_t> templ;
                 vector<EyePair> eyes;
                 auto ret = implPtr->createTemplate(faces, TemplateRole::Enrollment_1N, templ, eyes);
-
                 /* Write to edb and manifest */
                 manifestStream << id++ << " " << templ.size() << " " << edbStream.tellp() << endl;
-                edbStream.write((char *)templ.data(), templ.size());
+                edbStream.write((const char*)templ.data(), templ.size());
 
                 if (faces.size() != eyes.size())
                 {
@@ -431,7 +430,7 @@ insert(shared_ptr<Interface> &implPtr,
 void usage(const string &executable)
 {
     cerr << "Usage: " << executable << " enroll_1N|finalize_1N|search_1N|insert -c configDir -e enrollDir "
-            "-o outputDir -h outputStem -i inputFile/Dir"
+            "-o outputDir -h outputStem -i inputFile/Dir -n topn"
 #ifndef _WIN32
          << "-t numForks"
 #endif
@@ -536,6 +535,8 @@ main(int argc, char* argv[])
             outputFileStem = argv[requiredArgs+(++i)];
         else if (strcmp(argv[requiredArgs+i],"-i") == 0)
             inputFile = argv[requiredArgs+(++i)];
+        else if (strcmp(argv[requiredArgs + i], "-n") == 0)
+            candListLength = std::strtol(argv[requiredArgs+(++i)], nullptr, 10);
 #ifndef _WIN32
         else if (strcmp(argv[requiredArgs+i],"-t") == 0)
             numForks = atoi(argv[requiredArgs+(++i)]);
