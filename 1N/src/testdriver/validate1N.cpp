@@ -262,12 +262,13 @@ searchAndLog(
     /* Write to candidate list file */
     int i{0};
     for (const auto& candidate : candidateList)
-        candListStream << id << " " << i++ << " "
+        candListStream << id << " " << i << " "
         << static_cast<underlying_type<ReturnCode>::type>(ret.code) << " "
         << candidate.isAssigned << " "
         << candidate.templateId << " "
         << candidate.similarityScore << " "
-        << decision << endl;
+        << (i == 0 ? decision : false) << endl;
+    i++;
 }
 
 int
