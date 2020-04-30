@@ -452,11 +452,11 @@ insert(shared_ptr<Interface> &implPtr,
 
 void usage(const string &executable)
 {
-    cerr << "Usage: " << executable << " enroll_1N|finalize_1N|search_1N|insert "
+    cerr << "Usage: " << executable << " enroll_1N|search_1N|insert"
 #ifndef _WIN32
-            "-c configDir "
+            "|finalize_1N -c configDir "
 #endif
-            "-e enrollDir -o outputDir -h outputStem -i inputFile/Dir -n topn"
+            " -e enrollDir -o outputDir -h outputStem -i inputFile/Dir -n topn"
 #ifndef _WIN32
          << "-t numForks"
 #endif
@@ -617,23 +617,24 @@ main(int argc, char* argv[])
             case 0: /* Child */
 #endif
                 if (action == Action::Enroll_1N)
-                    return enroll(
-                            implPtr,
-                            configDir,
-                            inputFile,
-                            outputDir + "/" + outputFileStem + "." + mapActionToString[action]
-#ifndef _WIN32
-                            + "." + to_string(i)
+#ifdef _WIN32
+                {
+                    std::string prefix = "unconsolidated";
+                    return enroll(implPtr,
+                                  configDir,
+                                  inputFile,
+                                  outputDir + "/" + outputFileStem + "." + mapActionToString[action],
+                                  enrollDir + "/" + prefix + "mei.edb",
+                                  enrollDir + "/" + prefix + "mei.manifest");
+                }
+#else
+                    return enroll(implPtr,
+                                  configDir,
+                                  inputFile,
+                                  outputDir + "/" + outputFileStem + "." + mapActionToString[action] + "." + to_string(i),
+                                  outputDir + "/edb" + "." + to_string(i),
+                                  outputDir + "/manifest" + "." + to_string(i));
 #endif
-                            , outputDir + "/edb"
-#ifndef _WIN32
-                            + "." + to_string(i)
-#endif
-                            , outputDir + "/manifest"
-#ifndef _WIN32
-                            + "." + to_string(i)
-#endif
-                        );
                 else if (action == Action::Search_1N)
                     return search(
                             implPtr,
@@ -679,8 +680,10 @@ main(int argc, char* argv[])
             }
 #endif
         }
+#ifndef _WIN32
     } else if (action == Action::Finalize_1N) {
         return finalize(implPtr, outputDir, enrollDir, configDir);
+#endif
     } else if (action == Action::Insert) {
         /* Initialization */
         if (initialize(implPtr, configDir, enrollDir, action) != EXIT_SUCCESS)
